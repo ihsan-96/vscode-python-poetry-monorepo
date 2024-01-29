@@ -1,71 +1,61 @@
-# poetry-monorepo-helper README
+# poetry-monorepo README
 
-This is the README for your extension "poetry-monorepo-helper". After writing up a brief description, we recommend including the following sections.
+Welcome to the README for the "poetry-monorepo" Visual Studio Code extension. This extension is designed to assist in setting the proper interpreter and adding package paths to work seamlessly with Poetry on a monorepo, where multiple Poetry projects coexist.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+The "poetry-monorepo" extension offers the following features:
 
-For example if there is an image subfolder under your extension project workspace:
+- Automatically sets the Python interpreter based on the closest `pyproject.toml` file in the workspace.
+- Adds package paths to ensure proper functionality with Poetry in a monorepo setup, linking Python custom modules for improved IDE support.
 
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+**Note:** Screenshots or animations of the extension in action would be added here.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+Before using this extension, make sure you have the following requirements:
+
+- Visual Studio Code version 1.85.0 or higher.
+- [VS Code Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) version 1.0.5 or higher.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `poetryMonorepo.appendExtraPaths`: Option to append extra paths instead of replacing. Set to `true` to retain any extra paths you need. Only set this if you need any other extraPaths retained.
+
+## Installation
+
+1. Install the extension by searching for "poetry-monorepo" in the Visual Studio Code Extensions view.
+2. Reload or restart Visual Studio Code.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+No known issues at the moment.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
+- Initial release.
 
-Initial release of ...
+## Getting Started
 
-### 1.0.1
+1. Open a Python file within your monorepo workspace.
+2. The extension will automatically set the Python interpreter based on the closest `pyproject.toml` file for any active python file.
+3. Optionally, append extra paths by configuring the `poetryMonorepo.appendExtraPaths` setting, Set this only if you need other extraPaths retained.
+4. Enjoy improved IDE support with linked Python custom modules and correct interpreter.
 
-Fixed issue #.
+## Contribution
 
-### 1.1.0
+If you encounter any issues or have suggestions, feel free to contribute by opening an issue on the [GitHub repository](https://github.com/ihsan-96/vscode-python-poetry-monorepo).
 
-Added features X, Y, and Z.
+## License
 
----
+This extension is licensed under the [MIT License](LICENSE).
 
-## Following extension guidelines
+## Acknowledgments
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+Special thanks to the [Visual Studio Code team](https://code.visualstudio.com/) for providing a robust extension platform.
 
 **Enjoy!**

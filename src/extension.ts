@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(disposable);
 
-	// let disposable_command = vscode.commands.registerCommand('poetry-monorepo-helper.helloWorld', () => {
+	// let disposable_command = vscode.commands.registerCommand('poetry-monorepo.helloWorld', () => {
 	// 	// The code you place here will be executed every time your command is executed
 	// 	// Display a message box to the user
 	// 	vscode.window.showInformationMessage('Changed environment and paths for poetry');
@@ -65,13 +65,13 @@ async function setPythonInterpreter(poetryPath: string, poetryPackagePath: strin
     if (pythonInterpreterPath !== currentInterpreter && fs.existsSync(pythonInterpreterPath)) {
         await pythonExtension.environments.updateActiveEnvironmentPath(pythonInterpreterPath);
 
-        const appendExtraPath = vscode.workspace.getConfiguration('poetryHelper').get('appendExtraPaths');
+        const appendExtraPath = vscode.workspace.getConfiguration('poetryMonorepo').get('appendExtraPaths');
         if (appendExtraPath) {
             setExtraPathsAppend(poetryPackagePath, workspaceFolder.uri.fsPath);
         } else {
             setExtraPaths(poetryPackagePath, workspaceFolder.uri.fsPath);
         }
-        vscode.window.showInformationMessage(`Python interpretor and extra path changed.\n\nInterpretor: ${pythonInterpreterPath}.\n\nPath: ${poetryPackagePath}`)
+        vscode.window.showInformationMessage(`Python interpreter and extra path changed.\n\nInterpreter: ${pythonInterpreterPath}.\n\nPath: ${poetryPackagePath}`)
 
         // vscode.workspace.getConfiguration('python').update('defaultInterpreterPath', pythonInterpreterPath).then(_ => {
         //     vscode.commands.executeCommand('python.setInterpreter')
@@ -90,12 +90,12 @@ function setExtraPathsAppend(packagePath: string, workspaceRoot: string) {
         extraPaths = extraPaths.filter(path => path !== packageRelativePath)
         extraPaths.unshift(packageRelativePath)
     }
-    pythonConfig.update('analysis.extraPaths', extraPaths, vscode.ConfigurationTarget.WorkspaceFolder)
+    pythonConfig.update('analysis.extraPaths', extraPaths)
 }
 
 function setExtraPaths(packagePath: string, workspaceRoot: string) {
     const packageRelativePath = path.relative(workspaceRoot, packagePath);
-    vscode.workspace.getConfiguration('python').update('analysis.extraPaths', [packageRelativePath], vscode.ConfigurationTarget.WorkspaceFolder)
+    vscode.workspace.getConfiguration('python').update('analysis.extraPaths', [packageRelativePath])
 }
 
 // This method is called when your extension is deactivated

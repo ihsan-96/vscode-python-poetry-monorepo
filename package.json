@@ -1,7 +1,22 @@
 {
-  "name": "poetry-monorepo-helper",
-  "displayName": "poetry-monorepo-helper",
-  "description": "Helps to set proper interpretor and add package path to work properly with poetry on a monorepo",
+  "name": "poetry-monorepo",
+  "displayName": "Poetry Monorepo",
+  "description": "Helps to set proper interpreter and add package path to work properly with poetry on a monorepo, where there are multiple poetry projects",
+  "publisher": "ameenahsanma",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ihsan-96/vscode-python-poetry-monorepo.git"
+  },
+  "icon": "icon.png",
+  "keywords": [
+    "poetry",
+    "monorepo",
+    "python",
+    "extraPaths",
+    "interpreter",
+    "environment",
+    "venv"
+  ],
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
@@ -10,7 +25,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:python"
+    "onLanguage:python",
+    "workspaceContains:pyproject.toml"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -23,7 +39,7 @@
     ],
     "configuration": {
       "properties": {
-        "poetryHelper.appendExtraPaths": {
+        "poetryMonorepo.appendExtraPaths": {
           "type": "boolean",
           "default": false,
           "description": "Option to append the extra path instead of replacing. set true to retail any extraPaths you need"
@@ -39,6 +55,9 @@
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
