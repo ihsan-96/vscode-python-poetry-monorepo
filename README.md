@@ -1,4 +1,4 @@
-# poetry-monorepo README
+# Poetry Monorepo
 
 Welcome to the README for the "poetry-monorepo" Visual Studio Code extension. This extension is designed to assist in setting the proper interpreter and adding package paths to work seamlessly with Poetry on a monorepo, where multiple Poetry projects coexist.
 
