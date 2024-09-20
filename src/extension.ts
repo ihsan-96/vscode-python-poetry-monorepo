@@ -1,13 +1,10 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 'use strict';
 import * as VscodePython from "@vscode/python-extension";
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { exec } from 'child_process';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
 
     const activeEditor = vscode.window.activeTextEditor;
@@ -20,12 +17,6 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(disposable);
-
-	// let disposable_command = vscode.commands.registerCommand('poetry-monorepo.helloWorld', () => {
-	// 	// The code you place here will be executed every time your command is executed
-	// 	// Display a message box to the user
-	// 	vscode.window.showInformationMessage('Changed environment and paths for poetry');
-	// });
 }
 
 async function onActiveTextEditorChange(editor: vscode.TextEditor | undefined, pythonExtension: VscodePython.PythonExtension) {
@@ -57,10 +48,33 @@ function FindClosestPyProjectTomlInPath(pythonFile: string, workspaceRoot: strin
     return undefined;
 }
 
+async function getPyEnvInterpreterPath(poetryPath: string, pyEnvNamePath: string) {
+    const pyEnvName = fs.readFileSync(pyEnvNamePath, 'utf-8').trim();
+    
+    try {
+        return await new Promise<string>((resolve, reject) => {
+            exec(`pyenv prefix ${pyEnvName}`, { cwd: poetryPath }, (error, stdout, stderr) => {
+                if (error) {
+                    reject(`Error executing pyenv which: ${stderr}`);
+                } else {
+                    resolve(stdout.trim());
+                }
+            });
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
 async function setPythonInterpreter(poetryPath: string, poetryPackagePath: string, pythonExtension: VscodePython.PythonExtension, workspaceFolder: vscode.WorkspaceFolder) {
-    const pythonInterpreterPath = path.join(poetryPath, '.venv', 'bin', 'python');
-    // const currentDefaultInterpreter = vscode.workspace.getConfiguration('python').get('defaultInterpreterPath')
-    // const currentInterpreter = vscode.extensions.getExtension('ms-python.python')?.exports.environments.getActiveEnvironmentPath().path
+    let pythonInterpreterPath: string | null = null;
+
+    const pyEnvNamePath = path.join(poetryPath, '.python-version');
+    if (fs.existsSync(pyEnvNamePath)) {
+        pythonInterpreterPath = await getPyEnvInterpreterPath(poetryPath, pyEnvNamePath);
+    }
+
+    pythonInterpreterPath = pythonInterpreterPath ?? path.join(poetryPath, '.venv', 'bin', 'python');
     const currentInterpreter = pythonExtension.environments.getActiveEnvironmentPath().path
     if (pythonInterpreterPath !== currentInterpreter && fs.existsSync(pythonInterpreterPath)) {
         await pythonExtension.environments.updateActiveEnvironmentPath(pythonInterpreterPath);
@@ -72,10 +86,6 @@ async function setPythonInterpreter(poetryPath: string, poetryPackagePath: strin
             setExtraPaths(poetryPackagePath, workspaceFolder.uri.fsPath);
         }
         vscode.window.showInformationMessage(`Python interpreter and extra path changed.\n\nInterpreter: ${pythonInterpreterPath}.\n\nPath: ${poetryPackagePath}`)
-
-        // vscode.workspace.getConfiguration('python').update('defaultInterpreterPath', pythonInterpreterPath).then(_ => {
-        //     vscode.commands.executeCommand('python.setInterpreter')
-        // });
     }
 }
 
@@ -98,5 +108,4 @@ function setExtraPaths(packagePath: string, workspaceRoot: string) {
     vscode.workspace.getConfiguration('python').update('analysis.extraPaths', [packageRelativePath])
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
