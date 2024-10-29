@@ -58,7 +58,9 @@ function FindClosestPyProjectTomlInPath(pythonFile: string, workspaceRoot: strin
 }
 
 async function setPythonInterpreter(poetryPath: string, poetryPackagePath: string, pythonExtension: VscodePython.PythonExtension, workspaceFolder: vscode.WorkspaceFolder) {
-    const pythonInterpreterPath = path.join(poetryPath, '.venv', 'bin', 'python');
+    const binDir = process.platform === 'win32' ? 'Scripts' : 'bin';
+    const pythonExecutable = process.platform === 'win32' ? 'python.exe' : 'python';
+    const pythonInterpreterPath = path.join(poetryPath, '.venv', binDir, pythonExecutable);
     // const currentDefaultInterpreter = vscode.workspace.getConfiguration('python').get('defaultInterpreterPath')
     // const currentInterpreter = vscode.extensions.getExtension('ms-python.python')?.exports.environments.getActiveEnvironmentPath().path
     const currentInterpreter = pythonExtension.environments.getActiveEnvironmentPath().path
