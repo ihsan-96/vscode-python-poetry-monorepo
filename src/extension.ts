@@ -1,111 +1,191 @@
-'use strict';
+// The module 'vscode' contains the VS Code extensibility API
+// Import the module and reference it with the alias vscode in your code below
+"use strict";
+import * as child_process from "child_process";
+import { exec } from "child_process";
 import * as VscodePython from "@vscode/python-extension";
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { exec } from 'child_process';
+import * as vscode from "vscode";
+import * as path from "path";
+import * as fs from "fs";
+import { IConfigService, UpdatePythonAnalysisExtraPathsConfig } from "./config";
+import { ConfigService } from "./config";
 
 export async function activate(context: vscode.ExtensionContext) {
+  const activeEditor = vscode.window.activeTextEditor;
+  const pythonExtension = await VscodePython.PythonExtension.api();
 
-    const activeEditor = vscode.window.activeTextEditor;
-    const pythonExtension = await VscodePython.PythonExtension.api()
+  activeEditor &&
+    (await onActiveTextEditorChange(activeEditor, pythonExtension));
 
-    activeEditor && await onActiveTextEditorChange(activeEditor, pythonExtension);
+  let disposable = vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+    editor && (await onActiveTextEditorChange(editor, pythonExtension));
+  });
 
-    let disposable = vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-        editor && await onActiveTextEditorChange(editor, pythonExtension)
-    });
+  context.subscriptions.push(disposable);
 
-    context.subscriptions.push(disposable);
+  // let disposable_command = vscode.commands.registerCommand('poetry-monorepo.helloWorld', () => {
+  // 	// The code you place here will be executed every time your command is executed
+  // 	// Display a message box to the user
+  // 	vscode.window.showInformationMessage('Changed environment and paths for poetry');
+  // });
 }
 
-async function onActiveTextEditorChange(editor: vscode.TextEditor | undefined, pythonExtension: VscodePython.PythonExtension) {
-    if (!editor || editor.document.languageId !== 'python') return;
+async function onActiveTextEditorChange(
+  editor: vscode.TextEditor | undefined,
+  pythonExtension: VscodePython.PythonExtension
+) {
+  if (!editor || editor.document.languageId !== "python") return;
 
-    const pythonFile = editor.document.uri.fsPath;
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(pythonFile));
-    if (!workspaceFolder) return;
+  const pythonFile = editor.document.uri.fsPath;
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+    vscode.Uri.file(pythonFile)
+  );
+  const config = new ConfigService();
 
-    let paths = FindClosestPyProjectTomlInPath(pythonFile, workspaceFolder.uri.fsPath);
-    if (!paths) return;
+  if (!workspaceFolder) return;
 
-    const [poetryPath, packageDirPath] = paths;
+  let paths = FindClosestPyProjectTomlInPath(
+    pythonFile,
+    workspaceFolder.uri.fsPath
+  );
+  if (!paths) return;
 
-    setPythonInterpreter(poetryPath, packageDirPath, pythonExtension, workspaceFolder);
+  const [poetryPath, packageDirPath] = paths;
+
+  await setPythonInterpreter(
+    poetryPath,
+    packageDirPath,
+    pythonExtension,
+    workspaceFolder
+  );
+  updatePythonAnalysisExtraPaths(
+    packageDirPath,
+    workspaceFolder.uri.fsPath,
+    config
+  );
+  updatePytestSettings(poetryPath, workspaceFolder.uri.fsPath, config);
 }
 
-function FindClosestPyProjectTomlInPath(pythonFile: string, workspaceRoot: string) {
-    let currentDir = pythonFile;
-    let prevDir;
-    do {
-        currentDir = path.dirname(currentDir);
-        const pyprojectTomlPath = path.join(currentDir, 'pyproject.toml');
-        if (fs.existsSync(pyprojectTomlPath)) {
-            return [currentDir, prevDir || currentDir];
-        }
-        prevDir = currentDir;
-    } while (currentDir !== workspaceRoot)
+function FindClosestPyProjectTomlInPath(
+  pythonFile: string,
+  workspaceRoot: string
+) {
+  let currentDir = pythonFile;
+  let prevDir;
+  do {
+    currentDir = path.dirname(currentDir);
+    const pyprojectTomlPath = path.join(currentDir, "pyproject.toml");
+    if (fs.existsSync(pyprojectTomlPath)) {
+      return [currentDir, prevDir || currentDir];
+    }
+    prevDir = currentDir;
+  } while (currentDir !== workspaceRoot);
+  return undefined;
+}
+
+function GetPoetryVenvPath(poetryPath: string): string | undefined {
+  //Poetry not always uses local venv folder,
+  // so this function gets the real venv path given by poetry command.
+  const commands = [`cd ${poetryPath}`, "poetry env info --path"];
+  const outs = child_process.spawnSync(commands.join(" && "), { shell: true });
+
+  if (outs.error || outs.stderr.toString().trim() !== "") {
     return undefined;
+  }
+
+  return outs.stdout.toString().trim();
 }
 
-async function getPyEnvInterpreterPath(poetryPath: string, pyEnvNamePath: string) {
-    const pyEnvName = fs.readFileSync(pyEnvNamePath, 'utf-8').trim();
-    
-    try {
-        return await new Promise<string>((resolve, reject) => {
-            exec(`pyenv prefix ${pyEnvName}`, { cwd: poetryPath }, (error, stdout, stderr) => {
-                if (error) {
-                    reject(`Error executing pyenv which: ${stderr}`);
-                } else {
-                    resolve(stdout.trim());
-                }
-            });
-        });
-    } catch (e) {
-        return null;
-    }
-}
+async function getPyEnvPrefix(poetryPath: string, pyEnvNamePath: string) {
+  const pyEnvName = fs.readFileSync(pyEnvNamePath, "utf-8").trim();
 
-async function setPythonInterpreter(poetryPath: string, poetryPackagePath: string, pythonExtension: VscodePython.PythonExtension, workspaceFolder: vscode.WorkspaceFolder) {
-    let pythonInterpreterPath: string | null = null;
-
-    const pyEnvNamePath = path.join(poetryPath, '.python-version');
-    if (fs.existsSync(pyEnvNamePath)) {
-        pythonInterpreterPath = await getPyEnvInterpreterPath(poetryPath, pyEnvNamePath);
-    }
-
-    pythonInterpreterPath = pythonInterpreterPath ?? path.join(poetryPath, '.venv', 'bin', 'python');
-    const currentInterpreter = pythonExtension.environments.getActiveEnvironmentPath().path
-    if (pythonInterpreterPath !== currentInterpreter && fs.existsSync(pythonInterpreterPath)) {
-        await pythonExtension.environments.updateActiveEnvironmentPath(pythonInterpreterPath);
-
-        const appendExtraPath = vscode.workspace.getConfiguration('poetryMonorepo').get('appendExtraPaths');
-        if (appendExtraPath) {
-            setExtraPathsAppend(poetryPackagePath, workspaceFolder.uri.fsPath);
-        } else {
-            setExtraPaths(poetryPackagePath, workspaceFolder.uri.fsPath);
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      exec(
+        `pyenv prefix ${pyEnvName}`,
+        { cwd: poetryPath },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject(`Error executing pyenv which: ${stderr}`);
+          } else {
+            resolve(stdout.trim());
+          }
         }
-        vscode.window.showInformationMessage(`Python interpreter and extra path changed.\n\nInterpreter: ${pythonInterpreterPath}.\n\nPath: ${poetryPackagePath}`)
-    }
+      );
+    });
+  } catch (e) {
+    return null;
+  }
 }
 
-function setExtraPathsAppend(packagePath: string, workspaceRoot: string) {
-    const packageRelativePath = path.relative(workspaceRoot, packagePath);
-    const pythonConfig = vscode.workspace.getConfiguration('python')
-    let extraPaths: string[] = pythonConfig.get('analysis.extraPaths') || [];
-    const index = extraPaths.indexOf(packageRelativePath)
-    if (index < 0) {
-        extraPaths.unshift(packageRelativePath)
-    } else if (index > 0) {
-        extraPaths = extraPaths.filter(path => path !== packageRelativePath)
-        extraPaths.unshift(packageRelativePath)
-    }
-    pythonConfig.update('analysis.extraPaths', extraPaths)
+async function setPythonInterpreter(
+  poetryPath: string,
+  poetryPackagePath: string,
+  pythonExtension: VscodePython.PythonExtension,
+  workspaceFolder: vscode.WorkspaceFolder
+) {
+  const binDir = process.platform === "win32" ? "Scripts" : "bin";
+  const pythonExecutable =
+    process.platform === "win32" ? "python.exe" : "python";
+
+  let venvPath: string | null = null;
+  const pyEnvNamePath = path.join(poetryPath, ".python-version");
+  if (fs.existsSync(pyEnvNamePath)) {
+    venvPath = await getPyEnvPrefix(poetryPath, pyEnvNamePath);
+  }
+  venvPath =
+    venvPath ?? GetPoetryVenvPath(poetryPath) ?? path.join(poetryPath, ".venv");
+
+  const pythonInterpreterPath = path.join(venvPath, binDir, pythonExecutable);
+  const currentInterpreter =
+    pythonExtension.environments.getActiveEnvironmentPath().path;
+
+  if (
+    pythonInterpreterPath !== currentInterpreter &&
+    fs.existsSync(pythonInterpreterPath)
+  ) {
+    await pythonExtension.environments.updateActiveEnvironmentPath(
+      pythonInterpreterPath
+    );
+    vscode.window.showInformationMessage(
+      `Python interpreter changed.\n\nInterpreter: ${pythonInterpreterPath}.\n\nPath: ${poetryPackagePath}`
+    );
+  }
 }
 
-function setExtraPaths(packagePath: string, workspaceRoot: string) {
-    const packageRelativePath = path.relative(workspaceRoot, packagePath);
-    vscode.workspace.getConfiguration('python').update('analysis.extraPaths', [packageRelativePath])
+export async function updatePythonAnalysisExtraPaths(
+  packagePath: string,
+  workspaceRoot: string,
+  config: IConfigService
+) {
+  if (config.config.poetryMonorepo.updatePythonAnalysisExtraPaths === "disable")
+    return;
+
+  const packageRelativePath = path.relative(workspaceRoot, packagePath);
+  let extraPaths: string[] = [];
+
+  if (
+    config.config.poetryMonorepo.updatePythonAnalysisExtraPaths === "append"
+  ) {
+    extraPaths = config.config.python.analysis.extraPaths.filter(
+      (path) => path !== packageRelativePath
+    );
+  }
+
+  extraPaths.unshift(packageRelativePath);
+  await config.setPythonAnalysisExtraPaths(extraPaths);
+}
+
+export async function updatePytestSettings(
+  poetryPath: string,
+  workspaceRoot: string,
+  config: IConfigService
+) {
+  if (!config.config.poetryMonorepo.pytest.enabled) return;
+
+  const packageRelativePath = path.relative(workspaceRoot, poetryPath);
+
+  await config.setPythonTestingWorkingDirectory(packageRelativePath);
 }
 
 export function deactivate() {}
