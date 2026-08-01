@@ -97,7 +97,8 @@
     "lint": "eslint src --ext ts",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha --ui tdd \"out/test/unit/**/*.test.js\"",
-    "test:integration": "vscode-test"
+    "test:integration": "vscode-test",
+    "test:poetry": "mocha --ui tdd --timeout 300000 \"out/test/poetry/**/*.test.js\""
   },
   "extensionDependencies": [
     "ms-python.python"
