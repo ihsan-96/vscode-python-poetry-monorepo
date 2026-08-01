@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 "use strict";
+import * as child_process from "child_process";
 import * as VscodePython from "@vscode/python-extension";
 import * as vscode from "vscode";
 import * as path from "path";
@@ -83,6 +84,19 @@ function FindClosestPyProjectTomlInPath(
   return undefined;
 }
 
+function GetPoetryVenvPath(poetryPath: string): string | undefined {
+  //Poetry not always uses local venv folder,
+  // so this function gets the real venv path given by poetry command.
+  const commands = [`cd ${poetryPath}`, "poetry env info --path"];
+  const outs = child_process.spawnSync(commands.join(" && "), { shell: true });
+
+  if (outs.error || outs.stderr.toString().trim() !== "") {
+    return undefined;
+  }
+
+  return outs.stdout.toString().trim();
+}
+
 async function setPythonInterpreter(
   poetryPath: string,
   poetryPackagePath: string,
@@ -92,12 +106,11 @@ async function setPythonInterpreter(
   const binDir = process.platform === "win32" ? "Scripts" : "bin";
   const pythonExecutable =
     process.platform === "win32" ? "python.exe" : "python";
-  const pythonInterpreterPath = path.join(
-    poetryPath,
-    ".venv",
-    binDir,
-    pythonExecutable
-  );
+  let venvPath = GetPoetryVenvPath(poetryPath);
+  if (!venvPath) {
+    venvPath = path.join(poetryPath, ".venv");
+  }
+  const pythonInterpreterPath = path.join(venvPath, binDir, pythonExecutable);
   const currentInterpreter =
     pythonExtension.environments.getActiveEnvironmentPath().path;
 
