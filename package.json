@@ -40,7 +40,26 @@
       }
     ],
     "configuration": {
+      "title": "Poetry Monorepo",
       "properties": {
+        "poetryMonorepo.venvDiscovery": {
+          "type": "array",
+          "default": [
+            "in-project",
+            "poetry",
+            "pyenv"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "in-project",
+              "poetry",
+              "pyenv"
+            ]
+          },
+          "uniqueItems": true,
+          "markdownDescription": "Where to look for a project's interpreter, in order. `in-project` uses `.venv` next to `pyproject.toml`. `poetry` asks `poetry env info --path`. `pyenv` resolves the virtualenv named in `.python-version`. Set to `[]` to leave the interpreter alone."
+        },
         "poetryMonorepo.updatePythonAnalysisExtraPaths": {
           "type": "string",
           "enum": [
@@ -50,16 +69,22 @@
           ],
           "default": "replace",
           "enumDescriptions": [
-            "Replace the existing paths with the new package path",
-            "Append package path to the existing paths",
-            "Do not update paths on interpreter switch"
+            "Replace the existing paths with the package path",
+            "Add the package path ahead of the existing paths",
+            "Leave python.analysis.extraPaths alone"
           ],
-          "description": "Configure how python.analysis.extraPaths gets updated when extension switches interpreters"
+          "description": "How python.analysis.extraPaths is updated when the active file moves to another Poetry project."
         },
         "poetryMonorepo.pytest.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "If enabled, will set testing working directory to the Poetry project"
+          "markdownDescription": "Set `python.testing.cwd` to the Poetry project of the active file so pytest discovers its tests."
+        },
+        "poetryMonorepo.appendExtraPaths": {
+          "type": "boolean",
+          "default": false,
+          "description": "Option to append the extra path instead of replacing. set true to retail any extraPaths you need",
+          "markdownDeprecationMessage": "Use `#poetryMonorepo.updatePythonAnalysisExtraPaths#` instead. Still honoured while that setting is unset."
         }
       }
     }
@@ -70,7 +95,9 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "mocha --ui tdd \"out/test/unit/**/*.test.js\"",
+    "test:integration": "vscode-test"
   },
   "extensionDependencies": [
     "ms-python.python"
@@ -81,9 +108,10 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.4.1",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
     "eslint": "^8.56.0",
+    "mocha": "^10.2.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {

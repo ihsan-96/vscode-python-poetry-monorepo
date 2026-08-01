@@ -1,94 +1,70 @@
 import * as vscode from "vscode";
+import { InterpreterSource } from "./interpreter";
+import { ExtraPathsMode, resolveExtraPathsMode } from "./paths";
 
-export type UpdatePythonAnalysisExtraPathsConfig =
-  | "replace"
-  | "append"
-  | "disable";
-
-export interface PoetryMonorepoPytestConfig {
-  enabled: boolean;
+export interface Settings {
+  extraPathsMode: ExtraPathsMode;
+  venvDiscovery: InterpreterSource[];
+  pytestEnabled: boolean;
 }
 
-export interface PoetryMonorepoConfig {
-  updatePythonAnalysisExtraPaths: UpdatePythonAnalysisExtraPathsConfig;
-  pytest: PoetryMonorepoPytestConfig;
+export interface ConfigService {
+  readonly settings: Settings;
+  readonly extraPaths: string[];
+  readonly testingCwd: string | undefined;
+  setExtraPaths(paths: string[]): Promise<void>;
+  setTestingCwd(cwd: string): Promise<void>;
 }
 
-export interface PythonConfig {
-  analysis: {
-    extraPaths: string[];
-  };
-  testing: {
-    cwd: string;
-  };
-}
+const DEFAULT_DISCOVERY: InterpreterSource[] = [
+  "in-project",
+  "poetry",
+  "pyenv",
+];
 
-export interface ExtensionConfig {
-  poetryMonorepo: PoetryMonorepoConfig;
-  python: PythonConfig;
-}
+export function readSettings(scope: vscode.Uri): Settings {
+  const config = vscode.workspace.getConfiguration("poetryMonorepo", scope);
+  const inspected = config.inspect<ExtraPathsMode>(
+    "updatePythonAnalysisExtraPaths"
+  );
 
-export interface IConfigService {
-  readonly config: ExtensionConfig;
-  setPythonAnalysisExtraPaths(paths: string[]): Promise<void>;
-  setPythonTestingWorkingDirectory(pytestArgs: string): Promise<void>;
-}
-
-export function extensionConfigDefaults(): ExtensionConfig {
   return {
-    poetryMonorepo: {
-      updatePythonAnalysisExtraPaths: "replace",
-      pytest: {
-        enabled: false,
-      },
-    },
-    python: {
-      analysis: {
-        extraPaths: [],
-      },
-      testing: {
-        cwd: "",
-      },
-    },
+    extraPathsMode: resolveExtraPathsMode(
+      inspected?.workspaceFolderValue ??
+        inspected?.workspaceValue ??
+        inspected?.globalValue,
+      config.get<boolean>("appendExtraPaths")
+    ),
+    venvDiscovery:
+      config.get<InterpreterSource[]>("venvDiscovery") ?? DEFAULT_DISCOVERY,
+    pytestEnabled: config.get<boolean>("pytest.enabled") ?? false,
   };
 }
 
-export class ConfigService implements IConfigService {
-  public config!: ExtensionConfig;
+export class VscodeConfigService implements ConfigService {
+  constructor(private readonly scope: vscode.Uri) {}
 
-  constructor() {
-    this.config = extensionConfigDefaults();
-    this.fetchConfig(this.config);
+  get settings(): Settings {
+    return readSettings(this.scope);
   }
 
-  private fetchConfig(config: any, path: string[] = []) {
-    for (const [key, value] of Object.entries(config)) {
-      let newPath = [...path, key];
-      if (
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        value !== null
-      ) {
-        this.fetchConfig(value, newPath);
-      } else {
-        config[key] =
-          vscode.workspace
-            .getConfiguration(newPath[0])
-            .get(newPath.slice(1).join(".")) ?? value;
-      }
-    }
+  get extraPaths(): string[] {
+    return this.python().get<string[]>("analysis.extraPaths") ?? [];
   }
 
-  private async updatePythonConfig(path: string, value: any) {
-    await vscode.workspace.getConfiguration("python").update(path, value);
-    this.fetchConfig(this.config);
+  get testingCwd(): string | undefined {
+    return this.python().get<string>("testing.cwd") ?? undefined;
   }
 
-  async setPythonAnalysisExtraPaths(paths: string[]) {
-    await this.updatePythonConfig("analysis.extraPaths", paths);
+  async setExtraPaths(paths: string[]) {
+    await this.python().update("analysis.extraPaths", paths);
   }
 
-  async setPythonTestingWorkingDirectory(path: string) {
-    await this.updatePythonConfig("testing.cwd", path);
+  async setTestingCwd(cwd: string) {
+    await this.python().update("testing.cwd", cwd);
+  }
+
+  private python() {
+    return vscode.workspace.getConfiguration("python", this.scope);
   }
 }
