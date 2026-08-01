@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as path from "path";
 import * as vscode from "vscode";
+import type * as VscodePython from "@vscode/python-extension";
 
 const EXTENSION_ID = "ameenahsanma.poetry-monorepo";
 
@@ -85,6 +86,68 @@ suite("Extension", () => {
       await waitFor(extraPaths, (v) => v?.[0] === "packages/api/api"),
       ["packages/api/api"]
     );
+  });
+
+  // The fixture's Scripts/python.exe is a placeholder, so only the POSIX
+  // layout can actually be selected.
+  (process.platform === "win32" ? suite.skip : suite)("interpreter", () => {
+    function activeInterpreter() {
+      return vscode.extensions
+        .getExtension<VscodePython.PythonExtension>("ms-python.python")
+        ?.exports.environments.getActiveEnvironmentPath().path;
+    }
+
+    function venvOf(name: string) {
+      return path.join(
+        workspaceRoot().fsPath,
+        "packages",
+        name,
+        ".venv",
+        "bin",
+        "python"
+      );
+    }
+
+    test("follows the active file between packages", async () => {
+      await openPackage("api");
+      assert.strictEqual(
+        await waitFor(activeInterpreter, (v) => v === venvOf("api")),
+        venvOf("api")
+      );
+
+      await openPackage("web");
+      assert.strictEqual(
+        await waitFor(activeInterpreter, (v) => v === venvOf("web")),
+        venvOf("web")
+      );
+    });
+  });
+
+  suite("with pytest support enabled", () => {
+    setup(async () => {
+      await poetryMonorepo().update("pytest.enabled", true);
+    });
+
+    teardown(async () => {
+      await poetryMonorepo().update("pytest.enabled", undefined);
+      await python().update("testing.cwd", undefined);
+    });
+
+    test("points the test working directory at the Poetry project", async () => {
+      const testingCwd = () => python().get<string>("testing.cwd");
+
+      await openPackage("api");
+      assert.strictEqual(
+        await waitFor(testingCwd, (v) => v === "${workspaceFolder}/packages/api"),
+        "${workspaceFolder}/packages/api"
+      );
+
+      await openPackage("web");
+      assert.strictEqual(
+        await waitFor(testingCwd, (v) => v === "${workspaceFolder}/packages/web"),
+        "${workspaceFolder}/packages/web"
+      );
+    });
   });
 
   suite("with the deprecated appendExtraPaths set", () => {
