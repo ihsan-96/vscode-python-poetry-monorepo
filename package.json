@@ -34,15 +34,32 @@
     "languages": [
       {
         "id": "python",
-        "extensions": [".py"]
+        "extensions": [
+          ".py"
+        ]
       }
     ],
     "configuration": {
       "properties": {
-        "poetryMonorepo.appendExtraPaths": {
+        "poetryMonorepo.updatePythonAnalysisExtraPaths": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "append",
+            "disable"
+          ],
+          "default": "replace",
+          "enumDescriptions": [
+            "Replace the existing paths with the new package path",
+            "Append package path to the existing paths",
+            "Do not update paths on interpreter switch"
+          ],
+          "description": "Configure how python.analysis.extraPaths gets updated when extension switches interpreters"
+        },
+        "poetryMonorepo.pytest.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Option to append the extra path instead of replacing. set true to retail any extraPaths you need"
+          "description": "If enabled, will set testing working directory to the Poetry project"
         }
       }
     }
@@ -65,7 +82,7 @@
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8",
+    "@vscode/test-electron": "^2.4.1",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   },
