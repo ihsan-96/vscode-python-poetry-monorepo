@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 "use strict";
 import * as child_process from "child_process";
+import { exec } from "child_process";
 import * as VscodePython from "@vscode/python-extension";
 import * as vscode from "vscode";
 import * as path from "path";
@@ -9,8 +10,6 @@ import * as fs from "fs";
 import { IConfigService, UpdatePythonAnalysisExtraPathsConfig } from "./config";
 import { ConfigService } from "./config";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
   const activeEditor = vscode.window.activeTextEditor;
   const pythonExtension = await VscodePython.PythonExtension.api();
@@ -97,6 +96,28 @@ function GetPoetryVenvPath(poetryPath: string): string | undefined {
   return outs.stdout.toString().trim();
 }
 
+async function getPyEnvPrefix(poetryPath: string, pyEnvNamePath: string) {
+  const pyEnvName = fs.readFileSync(pyEnvNamePath, "utf-8").trim();
+
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      exec(
+        `pyenv prefix ${pyEnvName}`,
+        { cwd: poetryPath },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject(`Error executing pyenv which: ${stderr}`);
+          } else {
+            resolve(stdout.trim());
+          }
+        }
+      );
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
 async function setPythonInterpreter(
   poetryPath: string,
   poetryPackagePath: string,
@@ -106,10 +127,15 @@ async function setPythonInterpreter(
   const binDir = process.platform === "win32" ? "Scripts" : "bin";
   const pythonExecutable =
     process.platform === "win32" ? "python.exe" : "python";
-  let venvPath = GetPoetryVenvPath(poetryPath);
-  if (!venvPath) {
-    venvPath = path.join(poetryPath, ".venv");
+
+  let venvPath: string | null = null;
+  const pyEnvNamePath = path.join(poetryPath, ".python-version");
+  if (fs.existsSync(pyEnvNamePath)) {
+    venvPath = await getPyEnvPrefix(poetryPath, pyEnvNamePath);
   }
+  venvPath =
+    venvPath ?? GetPoetryVenvPath(poetryPath) ?? path.join(poetryPath, ".venv");
+
   const pythonInterpreterPath = path.join(venvPath, binDir, pythonExecutable);
   const currentInterpreter =
     pythonExtension.environments.getActiveEnvironmentPath().path;
@@ -162,5 +188,4 @@ export async function updatePytestSettings(
   await config.setPythonTestingWorkingDirectory(packageRelativePath);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
