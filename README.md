@@ -1,61 +1,65 @@
 # Poetry Monorepo
 
-Welcome to the README for the ["poetry-monorepo" Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=ameenahsanma.poetry-monorepo). This extension is designed to assist in setting the proper interpreter and adding package paths to work seamlessly with Poetry on a monorepo, where multiple Poetry projects coexist.
+A [Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=ameenahsanma.poetry-monorepo) for repositories that hold more than one Poetry project.
 
-## Features
+VS Code assumes one Python environment per workspace. In a monorepo that is wrong: each Poetry project has its own virtualenv and its own set of importable packages. This extension keeps the interpreter and the analysis paths pointed at whichever project the file you are editing belongs to, so imports resolve and completions work as you move around the repo.
 
-The "poetry-monorepo" extension offers the following features:
+## What it does
 
-- Automatically sets the Python interpreter based on the closest `pyproject.toml` file in the workspace.
-- Adds package paths to ensure proper functionality with Poetry in a monorepo setup, linking Python custom modules for improved IDE support.
+When you open or switch to a Python file, the extension finds the nearest `pyproject.toml` at or above it and then:
 
-**Note:** Screenshots or animations of the extension in action would be added here.
+- sets the Python interpreter to that project's virtualenv;
+- puts that project's package directory on `python.analysis.extraPaths`;
+- optionally points `python.testing.cwd` at the project so pytest discovers its tests.
+
+Nothing is written when the settings already say the right thing.
+
+## Finding the virtualenv
+
+Three places are checked, in order:
+
+| Source       | Where it looks                                                |
+| ------------ | ------------------------------------------------------------- |
+| `in-project` | `.venv` next to `pyproject.toml`                              |
+| `poetry`     | `poetry env info --path`                                      |
+| `pyenv`      | the virtualenv named in `.python-version`, under `PYENV_ROOT` |
+
+`in-project` is checked first and, when it hits, nothing else runs. If you use `virtualenvs.in-project = true` this costs a single file check and no subprocess.
+
+A virtualenv is only accepted if it really is one. `poetry env info --path` reports the base interpreter for a project whose virtualenv has not been created yet, and `pyenv` does the same for a plain version like `3.11.12`; in both cases the extension leaves your interpreter alone rather than switching you to the system Python.
 
 ## Requirements
 
-Before using this extension, make sure you have the following requirements:
+- VS Code 1.85 or newer
+- The [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 
-- Visual Studio Code version 1.85.0 or higher.
-- [VS Code Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) version 1.0.5 or higher.
+## Settings
 
-## Extension Settings
+| Setting                                         | Default                             | Description                                                                                                                                      |
+| ----------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `poetryMonorepo.venvDiscovery`                  | `["in-project", "poetry", "pyenv"]` | Where to look for the interpreter, in order. Set to `[]` to leave the interpreter alone.                                                         |
+| `poetryMonorepo.updatePythonAnalysisExtraPaths` | `"replace"`                         | `replace` overwrites `python.analysis.extraPaths`, `append` puts the project ahead of what is already there, `disable` leaves the setting alone. |
+| `poetryMonorepo.pytest.enabled`                 | `false`                             | Set `python.testing.cwd` to the Poetry project of the active file.                                                                               |
+| `poetryMonorepo.appendExtraPaths`               | `false`                             | Deprecated, replaced by `updatePythonAnalysisExtraPaths`. Still honoured while that setting is unset.                                            |
 
-This extension contributes the following settings:
+## Known issues
 
-- `poetryMonorepo.appendExtraPaths`: Option to append extra paths instead of replacing. Set to `true` to retain any extra paths you need. Only set this if you need any other extraPaths retained.
+- Opening a file under a project's `tests` directory puts `tests` on `extraPaths` rather than the package directory ([#1](https://github.com/ihsan-96/vscode-python-poetry-monorepo/issues/1)).
+- The extension writes to `.vscode/settings.json`, which shows up in `git status` if that file is committed. Set `poetryMonorepo.updatePythonAnalysisExtraPaths` to `disable` to stop it touching paths.
+- `poetry env info --path` is run in the background for projects without an in-project `.venv`, and the answer is cached for a minute. Switching a project's environment with `poetry env use` can take up to that long to be noticed.
 
-## Installation
+## Contributing
 
-1. Install the extension by searching for "poetry-monorepo" in the Visual Studio Code Extensions view.
-2. Reload or restart Visual Studio Code.
+Issues and pull requests are welcome at the [GitHub repository](https://github.com/ihsan-96/vscode-python-poetry-monorepo).
 
-## Known Issues
+```
+npm install
+npm test            # unit and VS Code integration tests
+npm run test:poetry # runs against a real poetry install, skipped if absent
+```
 
-No known issues at the moment.
-
-## Release Notes
-
-### 0.0.1
-
-- Initial release.
-
-## Getting Started
-
-1. Open a Python file within your monorepo workspace.
-2. The extension will automatically set the Python interpreter based on the closest `pyproject.toml` file for any active python file.
-3. Optionally, append extra paths by configuring the `poetryMonorepo.appendExtraPaths` setting, Set this only if you need other extraPaths retained.
-4. Enjoy improved IDE support with linked Python custom modules and correct interpreter.
-
-## Contribution
-
-If you encounter any issues or have suggestions, feel free to contribute by opening an issue on the [GitHub repository](https://github.com/ihsan-96/vscode-python-poetry-monorepo).
+Press `F5` in VS Code to launch a window with the extension loaded.
 
 ## License
 
-This extension is licensed under the [MIT License](LICENSE).
-
-## Acknowledgments
-
-Special thanks to the [Visual Studio Code team](https://code.visualstudio.com/) for providing a robust extension platform.
-
-**Enjoy!**
+[MIT](LICENSE)

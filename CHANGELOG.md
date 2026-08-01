@@ -1,9 +1,51 @@
 # Change Log
 
-All notable changes to the "poetry-monorepo" extension will be documented in this file.
+## [0.1.0]
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+First release since 0.0.1. Windows support was merged in October 2024 but never
+published, so it ships here too.
 
-## [Unreleased]
+Added
 
-- Initial release
+- Virtualenvs that Poetry keeps outside the project are now found, via
+  `poetry env info --path`. Thanks to @thisdotfabio (#11).
+- pyenv-virtualenv environments named in `.python-version` are now found.
+  Thanks to @g3rv4 (#5).
+- `poetryMonorepo.venvDiscovery` controls which of those are used, and in what
+  order. Set it to `[]` to stop the extension changing the interpreter.
+- `poetryMonorepo.updatePythonAnalysisExtraPaths` replaces the boolean
+  `appendExtraPaths` and adds a `disable` option (#7). Thanks to @Mythir (#8).
+- `poetryMonorepo.pytest.enabled` sets `python.testing.cwd` to the Poetry
+  project of the active file so pytest finds its tests. Thanks to @Mythir (#8).
+- Windows support. Thanks to @RomeoDespres (#6).
+- Unit, VS Code integration and real-poetry test suites, and CI on Linux, macOS
+  and Windows.
+
+Changed
+
+- Paths are updated when the active file moves between projects, not only when
+  the interpreter changes (#3).
+- Settings are only written when the value would actually change, so moving
+  between files in the same project no longer rewrites `settings.json` (#2).
+- Interpreter lookup no longer blocks the editor. Results are cached per
+  project for a minute, and a project with an in-project `.venv` never runs a
+  subprocess at all.
+- Paths written to settings use forward slashes on every platform, so a
+  committed `settings.json` still works for teammates on other systems.
+
+Fixed
+
+- A project whose virtualenv has not been created yet is left alone instead of
+  being switched to the system Python. `poetry env info --path` reports the
+  base interpreter in that case.
+- An activated virtualenv inherited from the shell no longer makes every
+  project in the monorepo resolve to that one environment.
+- `python.testing.cwd` is written as `${workspaceFolder}/<path>`. A bare
+  relative path with no separator is never resolved by the Python extension.
+- The search for the nearest `pyproject.toml` could fail to terminate if it
+  reached a filesystem root without matching the workspace root.
+- `appendExtraPaths` keeps working for anyone who set it.
+
+## [0.0.1]
+
+- Initial release.

@@ -36,7 +36,7 @@ export const nodeHost: Host = {
         { cwd, timeout: TIMEOUT_MS, windowsHide: true, env: childEnv() },
         (error, stdout) => {
           resolve(error ? { ok: false } : { ok: true, stdout });
-        }
+        },
       );
     });
   },

@@ -21,7 +21,7 @@ export interface Interpreter {
 export interface Resolver {
   resolve(
     poetryPath: string,
-    workspaceRoot: string
+    workspaceRoot: string,
   ): Promise<Interpreter | undefined>;
   invalidate(): void;
 }
@@ -38,7 +38,7 @@ function pathFor(platform: NodeJS.Platform) {
 
 export function interpreterIn(
   venvPath: string,
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
 ): string {
   const p = pathFor(platform);
   return platform === "win32"
@@ -56,15 +56,17 @@ async function isVirtualEnv(host: Host, venvPath: string): Promise<boolean> {
 async function candidateIn(
   host: Host,
   venvPath: string,
-  source: InterpreterSource
+  source: InterpreterSource,
 ): Promise<Interpreter | undefined> {
   const candidate = interpreterIn(venvPath, host.platform);
-  return (await host.exists(candidate)) ? { path: candidate, source } : undefined;
+  return (await host.exists(candidate))
+    ? { path: candidate, source }
+    : undefined;
 }
 
 async function fromInProjectVenv(
   host: Host,
-  poetryPath: string
+  poetryPath: string,
 ): Promise<Interpreter | undefined> {
   const venvPath = pathFor(host.platform).join(poetryPath, ".venv");
   return candidateIn(host, venvPath, "in-project");
@@ -72,12 +74,12 @@ async function fromInProjectVenv(
 
 async function fromPoetry(
   host: Host,
-  poetryPath: string
+  poetryPath: string,
 ): Promise<Interpreter | undefined> {
   const outcome = await host.exec(
     "poetry",
     ["env", "info", "--path"],
-    poetryPath
+    poetryPath,
   );
   if (!outcome.ok) {
     return undefined;
@@ -93,7 +95,7 @@ async function fromPoetry(
 async function fromPyenv(
   host: Host,
   poetryPath: string,
-  workspaceRoot: string
+  workspaceRoot: string,
 ): Promise<Interpreter | undefined> {
   const name = await readPythonVersion(host, poetryPath, workspaceRoot);
   if (!name) {
@@ -119,7 +121,7 @@ async function fromPyenv(
 async function pyenvPrefix(
   host: Host,
   name: string,
-  cwd: string
+  cwd: string,
 ): Promise<string | undefined> {
   const outcome = await host.exec("pyenv", ["prefix", name], cwd);
   return outcome.ok ? lastLine(outcome.stdout) : undefined;
@@ -128,7 +130,7 @@ async function pyenvPrefix(
 async function readPythonVersion(
   host: Host,
   poetryPath: string,
-  workspaceRoot: string
+  workspaceRoot: string,
 ): Promise<string | undefined> {
   const p = pathFor(host.platform);
   let currentDir = poetryPath;
@@ -203,7 +205,7 @@ export function createResolver(host: Host): Resolver {
         },
         () => {
           cache.delete(poetryPath);
-        }
+        },
       );
       return entry.promise;
     },

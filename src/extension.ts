@@ -17,14 +17,14 @@ export async function activate(context: vscode.ExtensionContext) {
   const resolver = createResolver(nodeHost);
 
   const watcher = vscode.workspace.createFileSystemWatcher(
-    "**/{pyproject.toml,poetry.toml,.python-version}"
+    "**/{pyproject.toml,poetry.toml,.python-version}",
   );
   watcher.onDidCreate(() => resolver.invalidate());
   watcher.onDidChange(() => resolver.invalidate());
   watcher.onDidDelete(() => resolver.invalidate());
 
   const disposable = vscode.window.onDidChangeActiveTextEditor((editor) =>
-    onActiveTextEditorChange(editor, pythonExtension, resolver)
+    onActiveTextEditorChange(editor, pythonExtension, resolver),
   );
 
   context.subscriptions.push(watcher, disposable);
@@ -42,14 +42,14 @@ let generation = 0;
 async function onActiveTextEditorChange(
   editor: vscode.TextEditor | undefined,
   pythonExtension: VscodePython.PythonExtension,
-  resolver: Resolver
+  resolver: Resolver,
 ) {
   if (!editor || editor.document.languageId !== "python") {
     return;
   }
 
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(
-    editor.document.uri
+    editor.document.uri,
   );
   if (!workspaceFolder) {
     return;
@@ -58,7 +58,7 @@ async function onActiveTextEditorChange(
   const workspaceRoot = workspaceFolder.uri.fsPath;
   const found = findClosestPyProjectToml(
     editor.document.uri.fsPath,
-    workspaceRoot
+    workspaceRoot,
   );
   if (!found) {
     return;
@@ -74,7 +74,7 @@ async function onActiveTextEditorChange(
     config,
     pythonExtension,
     resolver,
-    () => token === generation
+    () => token === generation,
   );
   await updateExtraPaths(packageDirPath, workspaceRoot, config);
   await updateTestingCwd(poetryPath, workspaceRoot, config);
@@ -86,7 +86,7 @@ async function setPythonInterpreter(
   config: ConfigService,
   pythonExtension: VscodePython.PythonExtension,
   resolver: Resolver,
-  isCurrent: () => boolean
+  isCurrent: () => boolean,
 ) {
   const sources = config.settings.venvDiscovery;
   if (sources.length === 0) {
@@ -104,22 +104,22 @@ async function setPythonInterpreter(
   }
 
   await pythonExtension.environments.updateActiveEnvironmentPath(
-    interpreter.path
+    interpreter.path,
   );
   vscode.window.showInformationMessage(
-    `Python interpreter changed.\n\nInterpreter: ${interpreter.path}`
+    `Python interpreter changed.\n\nInterpreter: ${interpreter.path}`,
   );
 }
 
 async function updateExtraPaths(
   packagePath: string,
   workspaceRoot: string,
-  config: ConfigService
+  config: ConfigService,
 ) {
   const next = nextExtraPaths(
     config.settings.extraPathsMode,
     toSettingPath(workspaceRoot, packagePath),
-    config.extraPaths
+    config.extraPaths,
   );
   if (next) {
     await config.setExtraPaths(next);
@@ -129,7 +129,7 @@ async function updateExtraPaths(
 async function updateTestingCwd(
   poetryPath: string,
   workspaceRoot: string,
-  config: ConfigService
+  config: ConfigService,
 ) {
   if (!config.settings.pytestEnabled) {
     return;

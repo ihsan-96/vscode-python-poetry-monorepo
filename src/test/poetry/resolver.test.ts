@@ -39,7 +39,7 @@ function makeMonorepo() {
         "[build-system]",
         'requires = ["poetry-core"]',
         'build-backend = "poetry.core.masonry.api"',
-      ].join("\n")
+      ].join("\n"),
     );
   }
   return root;
@@ -96,7 +96,7 @@ suite("resolver against a real pyenv layout", function () {
 
     assert.strictEqual(
       await createResolver(nodeHost).resolve(api, root),
-      undefined
+      undefined,
     );
   });
 });
@@ -134,7 +134,7 @@ suite("resolver against real poetry", function () {
     assert.strictEqual(
       await createResolver(nodeHost).resolve(api, root),
       undefined,
-      "a project with no virtualenv must not resolve to the base interpreter"
+      "a project with no virtualenv must not resolve to the base interpreter",
     );
   });
 
@@ -161,7 +161,7 @@ suite("resolver against real poetry", function () {
     assert.strictEqual(found?.source, "poetry");
     assert.ok(
       found!.path.startsWith(venvs),
-      `${found!.path} should live under ${venvs}`
+      `${found!.path} should live under ${venvs}`,
     );
     assert.ok(fs.existsSync(found!.path));
   });
@@ -183,7 +183,7 @@ suite("resolver against real poetry", function () {
     assert.notStrictEqual(
       forApi.path,
       forWeb.path,
-      "packages must not share an interpreter"
+      "packages must not share an interpreter",
     );
   });
 

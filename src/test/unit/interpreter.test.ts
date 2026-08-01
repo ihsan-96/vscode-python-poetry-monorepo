@@ -8,13 +8,16 @@ const WEB = "/repo/packages/web";
 
 suite("interpreterIn", () => {
   test("uses bin/python off win32", () => {
-    assert.strictEqual(interpreterIn("/p/.venv", "linux"), "/p/.venv/bin/python");
+    assert.strictEqual(
+      interpreterIn("/p/.venv", "linux"),
+      "/p/.venv/bin/python",
+    );
   });
 
   test("uses Scripts/python.exe on win32", () => {
     assert.strictEqual(
       interpreterIn("C:\\p\\.venv", "win32"),
-      "C:\\p\\.venv\\Scripts\\python.exe"
+      "C:\\p\\.venv\\Scripts\\python.exe",
     );
   });
 });
@@ -45,7 +48,10 @@ suite("in-project venv", () => {
 
     assert.strictEqual(await resolver.resolve(API, ROOT), undefined);
     paths.push(`${API}/.venv/bin/python`);
-    assert.strictEqual((await resolver.resolve(API, ROOT))?.source, "in-project");
+    assert.strictEqual(
+      (await resolver.resolve(API, ROOT))?.source,
+      "in-project",
+    );
   });
 
   test("resolves per package in a monorepo", async () => {
@@ -56,11 +62,11 @@ suite("in-project venv", () => {
 
     assert.strictEqual(
       (await resolver.resolve(API, ROOT))?.path,
-      `${API}/.venv/bin/python`
+      `${API}/.venv/bin/python`,
     );
     assert.strictEqual(
       (await resolver.resolve(WEB, ROOT))?.path,
-      `${WEB}/.venv/bin/python`
+      `${WEB}/.venv/bin/python`,
     );
   });
 });
@@ -97,12 +103,18 @@ suite("poetry", () => {
       exec: () => ({ ok: true, stdout: `${base}\n` }),
     });
 
-    assert.strictEqual(await createResolver(host).resolve(API, ROOT), undefined);
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
   });
 
   test("rejects empty output", async () => {
     const host = fakeHost({ exec: () => ({ ok: true, stdout: "\n" }) });
-    assert.strictEqual(await createResolver(host).resolve(API, ROOT), undefined);
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
   });
 
   test("rejects a non-zero exit even when a path was printed", async () => {
@@ -111,14 +123,17 @@ suite("poetry", () => {
       exec: () => ({ ok: false }),
     });
 
-    assert.strictEqual(await createResolver(host).resolve(API, ROOT), undefined);
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
   });
 
   test("ignores a warning banner printed before the path", async () => {
     const host = poetryHost(`Warning: something\n${cached}\n`);
     assert.strictEqual(
       (await createResolver(host).resolve(API, ROOT))?.path,
-      `${cached}/bin/python`
+      `${cached}/bin/python`,
     );
   });
 
@@ -141,11 +156,11 @@ suite("poetry", () => {
 
     assert.strictEqual(
       (await resolver.resolve(API, ROOT))?.path,
-      `${apiEnv}/bin/python`
+      `${apiEnv}/bin/python`,
     );
     assert.strictEqual(
       (await resolver.resolve(WEB, ROOT))?.path,
-      `${webEnv}/bin/python`
+      `${webEnv}/bin/python`,
     );
   });
 
@@ -159,7 +174,7 @@ suite("poetry", () => {
 
     assert.strictEqual(
       (await createResolver(host).resolve("C:\\repo\\api", "C:\\repo"))?.path,
-      `${env}\\Scripts\\python.exe`
+      `${env}\\Scripts\\python.exe`,
     );
   });
 });
@@ -190,7 +205,7 @@ suite("pyenv", () => {
 
     assert.deepStrictEqual(
       host.execCalls.map((call) => call.file),
-      ["poetry"]
+      ["poetry"],
     );
   });
 
@@ -198,20 +213,23 @@ suite("pyenv", () => {
     const host = pyenvHost("api\n", `${ROOT}/.python-version`);
     assert.strictEqual(
       (await createResolver(host).resolve(API, ROOT))?.source,
-      "pyenv"
+      "pyenv",
     );
   });
 
   test("does not read above the workspace root", async () => {
     const host = pyenvHost("api\n", "/.python-version");
-    assert.strictEqual(await createResolver(host).resolve(API, ROOT), undefined);
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
   });
 
   test("takes the first line of a multi-version file", async () => {
     const host = pyenvHost("api\n3.11.12\n");
     assert.strictEqual(
       (await createResolver(host).resolve(API, ROOT))?.source,
-      "pyenv"
+      "pyenv",
     );
   });
 
@@ -224,7 +242,7 @@ suite("pyenv", () => {
 
     assert.strictEqual(
       (await createResolver(host).resolve(API, ROOT))?.path,
-      `${nested}/bin/python`
+      `${nested}/bin/python`,
     );
   });
 
@@ -235,7 +253,10 @@ suite("pyenv", () => {
       files: { [`${API}/.python-version`]: "3.11.12\n" },
     });
 
-    assert.strictEqual(await createResolver(host).resolve(API, ROOT), undefined);
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
   });
 
   test("rejects a name that would be read as a flag", async () => {
@@ -268,7 +289,7 @@ suite("pyenv", () => {
 
     assert.strictEqual(
       (await createResolver(host).resolve(API, ROOT))?.path,
-      `${elsewhere}/bin/python`
+      `${elsewhere}/bin/python`,
     );
   });
 });
@@ -318,7 +339,7 @@ suite("caching", () => {
 
     assert.deepStrictEqual(
       host.execCalls.map((call) => call.cwd),
-      [API, WEB]
+      [API, WEB],
     );
   });
 

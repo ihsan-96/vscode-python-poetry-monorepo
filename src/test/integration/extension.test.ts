@@ -25,10 +25,10 @@ function extraPaths() {
 
 async function openPackage(name: string) {
   const file = vscode.Uri.file(
-    path.join(workspaceRoot().fsPath, "packages", name, name, "main.py")
+    path.join(workspaceRoot().fsPath, "packages", name, name, "main.py"),
   );
   await vscode.window.showTextDocument(
-    await vscode.workspace.openTextDocument(file)
+    await vscode.workspace.openTextDocument(file),
   );
 }
 
@@ -58,7 +58,7 @@ suite("Extension", () => {
   test("activates", () => {
     assert.strictEqual(
       vscode.extensions.getExtension(EXTENSION_ID)?.isActive,
-      true
+      true,
     );
   });
 
@@ -66,7 +66,10 @@ suite("Extension", () => {
   // file, which is what 0.0.1 shipped.
   test("sets extraPaths from the active file", async () => {
     await openPackage("api");
-    const paths = await waitFor(extraPaths, (v) => v?.[0] === "packages/api/api");
+    const paths = await waitFor(
+      extraPaths,
+      (v) => v?.[0] === "packages/api/api",
+    );
 
     assert.deepStrictEqual(paths, ["packages/api/api"]);
   });
@@ -78,13 +81,13 @@ suite("Extension", () => {
     await openPackage("web");
     assert.deepStrictEqual(
       await waitFor(extraPaths, (v) => v?.[0] === "packages/web/web"),
-      ["packages/web/web"]
+      ["packages/web/web"],
     );
 
     await openPackage("api");
     assert.deepStrictEqual(
       await waitFor(extraPaths, (v) => v?.[0] === "packages/api/api"),
-      ["packages/api/api"]
+      ["packages/api/api"],
     );
   });
 
@@ -104,7 +107,7 @@ suite("Extension", () => {
         name,
         ".venv",
         "bin",
-        "python"
+        "python",
       );
     }
 
@@ -112,13 +115,13 @@ suite("Extension", () => {
       await openPackage("api");
       assert.strictEqual(
         await waitFor(activeInterpreter, (v) => v === venvOf("api")),
-        venvOf("api")
+        venvOf("api"),
       );
 
       await openPackage("web");
       assert.strictEqual(
         await waitFor(activeInterpreter, (v) => v === venvOf("web")),
-        venvOf("web")
+        venvOf("web"),
       );
     });
   });
@@ -138,14 +141,20 @@ suite("Extension", () => {
 
       await openPackage("api");
       assert.strictEqual(
-        await waitFor(testingCwd, (v) => v === "${workspaceFolder}/packages/api"),
-        "${workspaceFolder}/packages/api"
+        await waitFor(
+          testingCwd,
+          (v) => v === "${workspaceFolder}/packages/api",
+        ),
+        "${workspaceFolder}/packages/api",
       );
 
       await openPackage("web");
       assert.strictEqual(
-        await waitFor(testingCwd, (v) => v === "${workspaceFolder}/packages/web"),
-        "${workspaceFolder}/packages/web"
+        await waitFor(
+          testingCwd,
+          (v) => v === "${workspaceFolder}/packages/web",
+        ),
+        "${workspaceFolder}/packages/web",
       );
     });
   });
@@ -166,7 +175,7 @@ suite("Extension", () => {
 
       assert.deepStrictEqual(
         await waitFor(extraPaths, (v) => v?.[0] === "packages/api/api"),
-        ["packages/api/api", "keep/me"]
+        ["packages/api/api", "keep/me"],
       );
     });
 
@@ -178,7 +187,7 @@ suite("Extension", () => {
 
       assert.deepStrictEqual(
         await waitFor(extraPaths, (v) => v?.[0] === "packages/web/web"),
-        ["packages/web/web", "packages/api/api", "keep/me"]
+        ["packages/web/web", "packages/api/api", "keep/me"],
       );
     });
   });

@@ -22,7 +22,7 @@ suite("findClosestPyProjectToml", () => {
     const found = findClosestPyProjectToml(
       path.join(api, "api", "main.py"),
       root,
-      fakeExists([path.join(api, "pyproject.toml")])
+      fakeExists([path.join(api, "pyproject.toml")]),
     );
 
     assert.deepStrictEqual(found, [api, path.join(api, "api")]);
@@ -32,7 +32,7 @@ suite("findClosestPyProjectToml", () => {
     const found = findClosestPyProjectToml(
       path.join(api, "main.py"),
       root,
-      fakeExists([path.join(api, "pyproject.toml")])
+      fakeExists([path.join(api, "pyproject.toml")]),
     );
 
     assert.deepStrictEqual(found, [api, api]);
@@ -45,7 +45,7 @@ suite("findClosestPyProjectToml", () => {
       fakeExists([
         path.join(api, "pyproject.toml"),
         path.join(root, "pyproject.toml"),
-      ])
+      ]),
     );
 
     assert.deepStrictEqual(found?.[0], api);
@@ -55,7 +55,7 @@ suite("findClosestPyProjectToml", () => {
     const found = findClosestPyProjectToml(
       path.join(root, "src", "main.py"),
       root,
-      fakeExists([path.join(root, "pyproject.toml")])
+      fakeExists([path.join(root, "pyproject.toml")]),
     );
 
     assert.deepStrictEqual(found, [root, path.join(root, "src")]);
@@ -64,7 +64,7 @@ suite("findClosestPyProjectToml", () => {
   test("returns undefined when there is none", () => {
     assert.strictEqual(
       findClosestPyProjectToml(path.join(api, "main.py"), root, fakeExists([])),
-      undefined
+      undefined,
     );
   });
 
@@ -73,9 +73,9 @@ suite("findClosestPyProjectToml", () => {
       findClosestPyProjectToml(
         path.resolve("/elsewhere/main.py"),
         root,
-        fakeExists([])
+        fakeExists([]),
       ),
-      undefined
+      undefined,
     );
   });
 });
@@ -98,7 +98,7 @@ suite("nextExtraPaths", () => {
   test("moves an existing entry to the front rather than duplicating it", () => {
     assert.deepStrictEqual(
       nextExtraPaths("append", "pkg/api", ["a", "pkg/api", "b"]),
-      ["pkg/api", "a", "b"]
+      ["pkg/api", "a", "b"],
     );
   });
 
@@ -107,10 +107,13 @@ suite("nextExtraPaths", () => {
   });
 
   test("writes nothing when the value is already correct", () => {
-    assert.strictEqual(nextExtraPaths("replace", "pkg/api", ["pkg/api"]), undefined);
+    assert.strictEqual(
+      nextExtraPaths("replace", "pkg/api", ["pkg/api"]),
+      undefined,
+    );
     assert.strictEqual(
       nextExtraPaths("append", "pkg/api", ["pkg/api", "a"]),
-      undefined
+      undefined,
     );
   });
 
@@ -146,7 +149,7 @@ suite("testingCwdFor", () => {
   test("qualifies a nested path", () => {
     assert.strictEqual(
       testingCwdFor("packages/api"),
-      "${workspaceFolder}/packages/api"
+      "${workspaceFolder}/packages/api",
     );
   });
 
@@ -160,7 +163,7 @@ suite("toSettingPath", () => {
     const root = path.resolve("/repo");
     assert.strictEqual(
       toSettingPath(root, path.join(root, "packages", "api")),
-      "packages/api"
+      "packages/api",
     );
   });
 });
@@ -173,7 +176,11 @@ suite("samePath", () => {
 
   test("ignores case and separator direction on win32", () => {
     assert.ok(
-      samePath("C:\\p\\.venv\\Scripts\\python.exe", "c:/p/.venv/Scripts/python.exe", "win32")
+      samePath(
+        "C:\\p\\.venv\\Scripts\\python.exe",
+        "c:/p/.venv/Scripts/python.exe",
+        "win32",
+      ),
     );
   });
 });

@@ -8,7 +8,7 @@ export type ExtraPathsMode = "replace" | "append" | "disable";
  */
 export function resolveExtraPathsMode(
   explicit: ExtraPathsMode | undefined,
-  legacyAppend: boolean | undefined
+  legacyAppend: boolean | undefined,
 ): ExtraPathsMode {
   if (explicit) {
     return explicit;
@@ -23,7 +23,7 @@ export function resolveExtraPathsMode(
 export function findClosestPyProjectToml(
   pythonFile: string,
   workspaceRoot: string,
-  exists: (target: string) => boolean = fs.existsSync
+  exists: (target: string) => boolean = fs.existsSync,
 ): [string, string] | undefined {
   let currentDir = path.dirname(pythonFile);
   let prevDir: string | undefined;
@@ -52,7 +52,7 @@ export function toSettingPath(from: string, to: string): string {
 export function nextExtraPaths(
   mode: ExtraPathsMode,
   packageRelativePath: string,
-  existing: string[]
+  existing: string[],
 ): string[] | undefined {
   if (mode === "disable") {
     return undefined;

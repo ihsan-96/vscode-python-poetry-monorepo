@@ -25,7 +25,7 @@ const DEFAULT_DISCOVERY: InterpreterSource[] = [
 export function readSettings(scope: vscode.Uri): Settings {
   const config = vscode.workspace.getConfiguration("poetryMonorepo", scope);
   const inspected = config.inspect<ExtraPathsMode>(
-    "updatePythonAnalysisExtraPaths"
+    "updatePythonAnalysisExtraPaths",
   );
 
   return {
@@ -33,7 +33,7 @@ export function readSettings(scope: vscode.Uri): Settings {
       inspected?.workspaceFolderValue ??
         inspected?.workspaceValue ??
         inspected?.globalValue,
-      config.get<boolean>("appendExtraPaths")
+      config.get<boolean>("appendExtraPaths"),
     ),
     venvDiscovery:
       config.get<InterpreterSource[]>("venvDiscovery") ?? DEFAULT_DISCOVERY,
