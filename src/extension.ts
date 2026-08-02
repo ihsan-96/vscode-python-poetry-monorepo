@@ -5,8 +5,10 @@ import { ConfigService, VscodeConfigService } from "./config";
 import { nodeHost } from "./host";
 import { createResolver, Resolver } from "./interpreter";
 import {
+  extraPathDirFor,
   findClosestPyProjectToml,
   nextExtraPaths,
+  packageDirsFor,
   samePath,
   testingCwdFor,
   toSettingPath,
@@ -64,7 +66,12 @@ async function onActiveTextEditorChange(
     return;
   }
 
-  const [poetryPath, packageDirPath] = found;
+  const [poetryPath, dirBelowProject] = found;
+  const packageDirPath = extraPathDirFor(
+    editor.document.uri.fsPath,
+    dirBelowProject,
+    packageDirsFor(poetryPath),
+  );
   const config = new VscodeConfigService(workspaceFolder.uri);
   const token = ++generation;
 

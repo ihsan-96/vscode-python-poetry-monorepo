@@ -1,5 +1,22 @@
 # Change Log
 
+## [0.1.1]
+
+Fixed
+
+- A file outside the package no longer puts its own directory on
+  `python.analysis.extraPaths`. Opening `tests/test_app.py` used to write
+  `tests`, which resolves nothing; it now writes the directory the package sits
+  in, so `from your_package import ...` resolves. The same applies to any other
+  directory in the project, `scripts` and `migrations` alike (#1).
+- Editing inside the package is unchanged, so sibling imports resolve as
+  before.
+- Projects using a `src` layout get `src` rather than the project directory,
+  and projects declaring several `packages` are recognised by each of them.
+
+The package directory is read from `name` or `packages` in `pyproject.toml`.
+Where neither can be read the path is left as 0.0.1 wrote it.
+
 ## [0.1.0]
 
 First release since 0.0.1. Windows support was merged in October 2024 but never

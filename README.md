@@ -9,7 +9,7 @@ VS Code assumes one Python environment per workspace. In a monorepo that is wron
 When you open or switch to a Python file, the extension finds the nearest `pyproject.toml` at or above it and then:
 
 - sets the Python interpreter to that project's virtualenv;
-- puts that project's package directory on `python.analysis.extraPaths`;
+- puts the right directory on `python.analysis.extraPaths` — the package itself while you are editing inside it, so a sibling module resolves, and the directory the package sits in while you are anywhere else, so `from your_package import ...` resolves from a test;
 - optionally points `python.testing.cwd` at the project so pytest discovers its tests.
 
 Nothing is written when the settings already say the right thing.
@@ -44,7 +44,7 @@ A virtualenv is only accepted if it really is one. `poetry env info --path` repo
 
 ## Known issues
 
-- Opening a file under a project's `tests` directory puts `tests` on `extraPaths` rather than the package directory ([#1](https://github.com/ihsan-96/vscode-python-poetry-monorepo/issues/1)).
+- Working out which directory is the package needs a `name` or a `packages` entry in `pyproject.toml`, and the directory has to exist. When neither is readable the path falls back to the directory below `pyproject.toml` on the way to the file, which is what 0.0.1 shipped.
 - The extension writes to `.vscode/settings.json`, which shows up in `git status` if that file is committed. Set `poetryMonorepo.updatePythonAnalysisExtraPaths` to `disable` to stop it touching paths.
 - `poetry env info --path` is run in the background for projects without an in-project `.venv`, and the answer is cached for a minute. Switching a project's environment with `poetry env use` can take up to that long to be noticed.
 

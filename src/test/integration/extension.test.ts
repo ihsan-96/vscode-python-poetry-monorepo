@@ -32,8 +32,10 @@ async function openPackage(name: string) {
   );
 }
 
+// The Python extension can be slow to come up on a cold CI runner, so allow
+// well past the point where a working setup would have settled.
 async function waitFor<T>(read: () => T, predicate: (value: T) => boolean) {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 250; i++) {
     const value = read();
     if (predicate(value)) {
       return value;
@@ -72,6 +74,28 @@ suite("Extension", () => {
     );
 
     assert.deepStrictEqual(paths, ["packages/api/api"]);
+  });
+
+  // A test imports the package by name, so it needs the project on the path
+  // rather than tests/, which is what 0.1.0 wrote.
+  test("uses the project, not tests/, for a file under tests", async () => {
+    const file = vscode.Uri.file(
+      path.join(
+        workspaceRoot().fsPath,
+        "packages",
+        "api",
+        "tests",
+        "test_main.py",
+      ),
+    );
+    await vscode.window.showTextDocument(
+      await vscode.workspace.openTextDocument(file),
+    );
+
+    assert.deepStrictEqual(
+      await waitFor(extraPaths, (v) => v?.[0] === "packages/api"),
+      ["packages/api"],
+    );
   });
 
   test("follows the active file between packages in the monorepo", async () => {
