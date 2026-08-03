@@ -17,6 +17,8 @@ export interface FakeHostOptions {
   paths?: string[];
   files?: Record<string, string>;
   pyenvRoot?: string;
+  homeDir?: string;
+  env?: Record<string, string>;
   exec?: (call: ExecCall) => ExecOutcome;
 }
 
@@ -33,6 +35,8 @@ export function fakeHost(options: FakeHostOptions = {}): FakeHost {
     clock,
     now: () => clock.value,
     pyenvRoot: () => options.pyenvRoot ?? "/home/u/.pyenv",
+    homeDir: () => options.homeDir ?? "/home/u",
+    env: (name) => options.env?.[name],
     // Read through, so a test can add a path mid-run.
     async exists(target) {
       return paths.includes(target) || target in files;

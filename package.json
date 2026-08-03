@@ -17,7 +17,7 @@
     "environment",
     "venv"
   ],
-  "version": "0.1.1",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -30,7 +30,18 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [],
+    "commands": [
+      {
+        "command": "poetryMonorepo.showLogs",
+        "title": "Show Logs",
+        "category": "Poetry Monorepo"
+      },
+      {
+        "command": "poetryMonorepo.generatePyrightConfig",
+        "title": "Generate pyrightconfig.json",
+        "category": "Poetry Monorepo"
+      }
+    ],
     "languages": [
       {
         "id": "python",
@@ -59,6 +70,16 @@
           },
           "uniqueItems": true,
           "markdownDescription": "Where to look for a project's interpreter, in order. `in-project` uses `.venv` next to `pyproject.toml`. `poetry` asks `poetry env info --path`. `pyenv` resolves the virtualenv named in `.python-version`. Set to `[]` to leave the interpreter alone."
+        },
+        "poetryMonorepo.poetryPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Full path to the `poetry` executable. Left empty, `poetry` is taken from the PATH the editor runs with, and the usual install locations are tried if it is not there. Set this when poetry is on PATH only through a shell profile, which the editor never reads -- the usual reason it works in the terminal but not in the editor."
+        },
+        "poetryMonorepo.generatePyrightConfig": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Keep a `pyrightconfig.json` at the workspace root holding one `executionEnvironments` entry per Poetry project, and stop writing `python.analysis.extraPaths`. The file is written once rather than on every editor change, so `settings.json` stops appearing in `git status`. **While a `pyrightconfig.json` exists Pylance ignores every `python.analysis.*` setting, not just `extraPaths`.**"
         },
         "poetryMonorepo.updatePythonAnalysisExtraPaths": {
           "type": "string",

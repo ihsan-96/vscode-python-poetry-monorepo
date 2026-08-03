@@ -33,10 +33,14 @@ async function openPackage(name: string) {
 }
 
 // The Python extension can be slow to come up on a cold CI runner, so allow
-// well past the point where a working setup would have settled.
-async function waitFor<T>(read: () => T, predicate: (value: T) => boolean) {
+// well past the point where a working setup would have settled. Readers may be
+// async -- reading a file is -- and a sync one awaits to itself.
+async function waitFor<T>(
+  read: () => T | Promise<T>,
+  predicate: (value: T) => boolean,
+): Promise<T> {
   for (let i = 0; i < 250; i++) {
-    const value = read();
+    const value = await read();
     if (predicate(value)) {
       return value;
     }
@@ -180,6 +184,73 @@ suite("Extension", () => {
         ),
         "${workspaceFolder}/packages/web",
       );
+    });
+  });
+
+  // Pyright reads these itself, per file, so settings.json stops being
+  // rewritten as the active file moves between projects (#2).
+  suite("with pyrightconfig generation enabled", () => {
+    const sentinel = ["untouched"];
+
+    function pyrightConfigUri() {
+      return vscode.Uri.joinPath(workspaceRoot(), "pyrightconfig.json");
+    }
+
+    async function readPyrightConfig() {
+      try {
+        return JSON.parse(
+          Buffer.from(
+            await vscode.workspace.fs.readFile(pyrightConfigUri()),
+          ).toString("utf8"),
+        );
+      } catch {
+        return undefined;
+      }
+    }
+
+    setup(async () => {
+      await python().update("analysis.extraPaths", sentinel);
+      await poetryMonorepo().update("generatePyrightConfig", true);
+    });
+
+    teardown(async () => {
+      await poetryMonorepo().update("generatePyrightConfig", undefined);
+      await python().update("analysis.extraPaths", []);
+      try {
+        await vscode.workspace.fs.delete(pyrightConfigUri());
+      } catch {
+        // Nothing to clean up if the test never got as far as writing it.
+      }
+    });
+
+    test("writes an execution environment per Poetry project", async () => {
+      const config = await waitFor(
+        readPyrightConfig,
+        (value) => value?.executionEnvironments?.length === 2,
+      );
+
+      assert.deepStrictEqual(config.executionEnvironments, [
+        {
+          root: "packages/api",
+          extraPaths: ["packages/api", "packages/api/api"],
+        },
+        {
+          root: "packages/web",
+          extraPaths: ["packages/web", "packages/web/web"],
+        },
+      ]);
+    });
+
+    test("stops writing python.analysis.extraPaths", async () => {
+      await waitFor(
+        readPyrightConfig,
+        (value) => value?.executionEnvironments?.length === 2,
+      );
+
+      await openPackage("api");
+      await openPackage("web");
+
+      assert.deepStrictEqual(extraPaths(), sentinel);
     });
   });
 

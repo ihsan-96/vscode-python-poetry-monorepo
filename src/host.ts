@@ -10,6 +10,8 @@ export const nodeHost: Host = {
   platform: process.platform,
   now: () => Date.now(),
   pyenvRoot: () => process.env.PYENV_ROOT ?? path.join(os.homedir(), ".pyenv"),
+  homeDir: () => os.homedir(),
+  env: (name) => process.env[name],
 
   async exists(target) {
     try {
@@ -35,7 +37,14 @@ export const nodeHost: Host = {
         args,
         { cwd, timeout: TIMEOUT_MS, windowsHide: true, env: childEnv() },
         (error, stdout) => {
-          resolve(error ? { ok: false } : { ok: true, stdout });
+          if (!error) {
+            resolve({ ok: true, stdout });
+            return;
+          }
+          // execFile reports the exit code in `code` for a process that ran,
+          // and a spawn error string such as ENOENT for one that never did.
+          const notFound = (error as NodeJS.ErrnoException).code === "ENOENT";
+          resolve({ ok: false, reason: notFound ? "not-found" : undefined });
         },
       );
     });

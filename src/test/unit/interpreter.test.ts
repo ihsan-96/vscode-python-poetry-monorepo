@@ -179,6 +179,264 @@ suite("poetry", () => {
   });
 });
 
+// A virtualenv's bin/python is a symlink to the Python it was built against,
+// so it dangles once that Python is gone or the environment moves to another
+// home directory. Every source rejects it, correctly, and used to do so
+// without a word.
+suite("a virtualenv whose interpreter is missing", () => {
+  function loggingHost(paths: string[]) {
+    const warnings: string[] = [];
+    const host = fakeHost({ paths });
+    const logger = {
+      debug() {},
+      info() {},
+      warn: (message: string) => warnings.push(message),
+    };
+    return { host, logger, warnings };
+  }
+
+  test("says so rather than doing nothing quietly", async () => {
+    const { host, logger, warnings } = loggingHost([`${API}/.venv`]);
+
+    assert.strictEqual(
+      await createResolver(host, logger).resolve(API, ROOT),
+      undefined,
+    );
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes(`${API}/.venv`));
+    assert.ok(warnings[0].includes("poetry install"));
+  });
+
+  test("says it once, not on every editor change", async () => {
+    const { host, logger, warnings } = loggingHost([`${API}/.venv`]);
+    const resolver = createResolver(host, logger);
+
+    await resolver.resolve(API, ROOT);
+    await resolver.resolve(API, ROOT);
+    await resolver.resolve(API, ROOT);
+
+    assert.strictEqual(warnings.length, 1);
+  });
+
+  test("says it again after invalidate, once the venv may have been rebuilt", async () => {
+    const { host, logger, warnings } = loggingHost([`${API}/.venv`]);
+    const resolver = createResolver(host, logger);
+
+    await resolver.resolve(API, ROOT);
+    resolver.invalidate();
+    await resolver.resolve(API, ROOT);
+
+    assert.strictEqual(warnings.length, 2);
+  });
+
+  test("stays quiet when there is simply no venv", async () => {
+    const { host, logger, warnings } = loggingHost([]);
+
+    assert.strictEqual(
+      await createResolver(host, logger).resolve(API, ROOT),
+      undefined,
+    );
+    assert.deepStrictEqual(warnings, []);
+  });
+
+  test("covers a virtualenv poetry keeps outside the project", async () => {
+    const outside = "/cache/virtualenvs/api-abc-py3.11";
+    const warnings: string[] = [];
+    const host = fakeHost({
+      paths: [outside, `${outside}/pyvenv.cfg`],
+      exec: () => ({ ok: true, stdout: `${outside}\n` }),
+    });
+    const logger = {
+      debug() {},
+      info() {},
+      warn: (message: string) => warnings.push(message),
+    };
+
+    assert.strictEqual(
+      await createResolver(host, logger).resolve(API, ROOT),
+      undefined,
+    );
+    assert.strictEqual(warnings.length, 1);
+    assert.ok(warnings[0].includes(outside));
+  });
+});
+
+// A container installs poetry with pipx or the official installer, both of
+// which extend PATH from a shell profile the editor never sources, so the bare
+// name is not found even though the terminal finds it (#10).
+suite("finding poetry when it is not on PATH", () => {
+  const cached = "/cache/virtualenvs/api-abc-py3.11";
+  const local = "/home/u/.local/bin/poetry";
+
+  /** A host where only `at` exists, and only that executable answers. */
+  function hostWith(at: string | undefined, extra: string[] = []) {
+    return fakeHost({
+      paths: [
+        `${cached}/pyvenv.cfg`,
+        `${cached}/bin/python`,
+        ...(at ? [at] : []),
+        ...extra,
+      ],
+      exec: (call) =>
+        call.file === at
+          ? { ok: true, stdout: `${cached}\n` }
+          : { ok: false, reason: "not-found" },
+    });
+  }
+
+  test("falls back to the usual install locations", async () => {
+    const host = hostWith(local);
+    const found = await createResolver(host).resolve(API, ROOT);
+
+    assert.strictEqual(found?.path, `${cached}/bin/python`);
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry", local],
+    );
+  });
+
+  test("prefers the first location that exists", async () => {
+    const host = fakeHost({
+      paths: [
+        `${cached}/pyvenv.cfg`,
+        `${cached}/bin/python`,
+        "/home/u/.poetry/bin/poetry",
+        local,
+      ],
+      exec: (call) =>
+        call.file === "poetry"
+          ? { ok: false, reason: "not-found" }
+          : { ok: true, stdout: `${cached}\n` },
+    });
+    await createResolver(host).resolve(API, ROOT);
+
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry", local],
+    );
+  });
+
+  test("looks under POETRY_HOME first of all", async () => {
+    const home = "/opt/pypoetry/bin/poetry";
+    const host = fakeHost({
+      paths: [`${cached}/pyvenv.cfg`, `${cached}/bin/python`, home, local],
+      env: { POETRY_HOME: "/opt/pypoetry" },
+      exec: (call) =>
+        call.file === "poetry"
+          ? { ok: false, reason: "not-found" }
+          : { ok: true, stdout: `${cached}\n` },
+    });
+    await createResolver(host).resolve(API, ROOT);
+
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry", home],
+    );
+  });
+
+  test("keeps the executable it found, rather than probing again", async () => {
+    const host = hostWith(local);
+    const resolver = createResolver(host);
+
+    await resolver.resolve(API, ROOT);
+    await resolver.resolve(WEB, ROOT);
+
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry", local, local],
+    );
+  });
+
+  test("does not probe when poetry ran and simply failed", async () => {
+    const host = fakeHost({
+      paths: [local],
+      exec: () => ({ ok: false }),
+    });
+
+    assert.strictEqual(
+      await createResolver(host).resolve(API, ROOT),
+      undefined,
+    );
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry"],
+    );
+  });
+
+  test("gives up once, not on every project", async () => {
+    const host = hostWith(undefined);
+    const resolver = createResolver(host);
+
+    await resolver.resolve(API, ROOT);
+    await resolver.resolve(WEB, ROOT);
+
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["poetry"],
+    );
+    assert.strictEqual(resolver.poetryMissing(), true);
+  });
+
+  test("looks again after invalidate, so an install is picked up", async () => {
+    const host = hostWith(undefined);
+    const resolver = createResolver(host);
+
+    await resolver.resolve(API, ROOT);
+    resolver.invalidate();
+    await resolver.resolve(API, ROOT);
+
+    assert.strictEqual(host.execCalls.length, 2);
+    assert.strictEqual(resolver.poetryMissing(), true);
+  });
+
+  test("uses a configured path verbatim, without probing", async () => {
+    const configured = "/opt/custom/poetry";
+    const host = hostWith(configured, [local]);
+    const found = await createResolver(host).resolve(API, ROOT, configured);
+
+    assert.strictEqual(found?.path, `${cached}/bin/python`);
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      [configured],
+    );
+  });
+
+  test("reports a configured path that does not work, rather than guessing", async () => {
+    const host = hostWith(local);
+    const resolver = createResolver(host);
+
+    assert.strictEqual(
+      await resolver.resolve(API, ROOT, "/opt/wrong/poetry"),
+      undefined,
+    );
+    assert.deepStrictEqual(
+      host.execCalls.map((call) => call.file),
+      ["/opt/wrong/poetry"],
+    );
+  });
+
+  test("looks in the Windows locations on win32", async () => {
+    const installed =
+      "C:\\Users\\u\\AppData\\Roaming\\pypoetry\\venv\\Scripts\\poetry.exe";
+    const env = "C:\\cache\\api-abc";
+    const host = fakeHost({
+      platform: "win32",
+      homeDir: "C:\\Users\\u",
+      env: { APPDATA: "C:\\Users\\u\\AppData\\Roaming" },
+      paths: [`${env}\\pyvenv.cfg`, `${env}\\Scripts\\python.exe`, installed],
+      exec: (call) =>
+        call.file === installed
+          ? { ok: true, stdout: env }
+          : { ok: false, reason: "not-found" },
+    });
+
+    assert.strictEqual(
+      (await createResolver(host).resolve("C:\\repo\\api", "C:\\repo"))?.path,
+      `${env}\\Scripts\\python.exe`,
+    );
+  });
+});
+
 suite("pyenv", () => {
   const prefix = "/home/u/.pyenv/versions/api";
 

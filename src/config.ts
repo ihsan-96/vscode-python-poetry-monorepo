@@ -6,6 +6,9 @@ export interface Settings {
   extraPathsMode: ExtraPathsMode;
   venvDiscovery: InterpreterSource[];
   pytestEnabled: boolean;
+  /** Full path to the poetry executable, when a bare `poetry` will not do. */
+  poetryPath: string | undefined;
+  generatePyrightConfig: boolean;
 }
 
 export interface ConfigService {
@@ -38,6 +41,9 @@ export function readSettings(scope: vscode.Uri): Settings {
     venvDiscovery:
       config.get<InterpreterSource[]>("venvDiscovery") ?? DEFAULT_DISCOVERY,
     pytestEnabled: config.get<boolean>("pytest.enabled") ?? false,
+    poetryPath: config.get<string>("poetryPath")?.trim() || undefined,
+    generatePyrightConfig:
+      config.get<boolean>("generatePyrightConfig") ?? false,
   };
 }
 

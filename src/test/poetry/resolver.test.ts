@@ -166,6 +166,27 @@ suite("resolver against real poetry", function () {
     assert.ok(fs.existsSync(found!.path));
   });
 
+  // What poetryMonorepo.poetryPath is for: a container where poetry is on PATH
+  // only through a shell profile the editor never reads (#10).
+  test("resolves with poetry given by its full path", async () => {
+    const api = path.join(root, "packages", "api");
+    poetry(["env", "use", "python3"], api, {
+      POETRY_VIRTUALENVS_IN_PROJECT: "false",
+    });
+    const executable = execFileSync(
+      process.platform === "win32" ? "where" : "which",
+      ["poetry"],
+    )
+      .toString()
+      .trim()
+      .split(/\r?\n/)[0];
+
+    const found = await createResolver(nodeHost).resolve(api, root, executable);
+
+    assert.strictEqual(found?.source, "poetry");
+    assert.ok(fs.existsSync(found!.path));
+  });
+
   test("keeps each package in the monorepo on its own virtualenv", async () => {
     const api = path.join(root, "packages", "api");
     const web = path.join(root, "packages", "web");
